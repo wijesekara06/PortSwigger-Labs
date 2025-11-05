@@ -1,4 +1,4 @@
-## 0. Introduction
+##  Introduction
 
 OS command injection is a web security vulnerability that allows an attacker to execute arbitrary commands on the operating system of the server that is running an application. This vulnerability occurs when an application passes unsanitized user-supplied data (such as form inputs, cookies, or HTTP headers) to a system shell.
 
