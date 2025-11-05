@@ -1,0 +1,30 @@
+## 0. Introduction
+
+OS command injection is a web security vulnerability that allows an attacker to execute arbitrary commands on the operating system of the server that is running an application. This vulnerability occurs when an application passes unsanitized user-supplied data (such as form inputs, cookies, or HTTP headers) to a system shell.
+
+### How does it work?
+
+The vulnerability is exploited by injecting OS command metacharacters into the user input. These characters can terminate the intended command and allow a new, malicious command to be executed.
+
+Common payload characters include:
+
+- `&`: Executes the injected command after the original command finishes.
+- `|`: Pipes the output of the original command into the injected command.
+- `;`: Separates commands, executing them sequentially.
+- `||`: Executes the injected command only if the original command fails.
+- `&&`: Executes the injected command only if the original command succeeds.
+- `$(...)` or `` `...` ``: Command substitution; the output of the injected command is placed into the original command.
+
+### Types of OS Command Injection
+
+**Direct (In-band):** The output of the injected command is returned directly in the application's HTTP response. This is the easiest to exploit as the attacker gets immediate feedback.
+
+**Blind (Out-of-band):** The output of the command is not returned. To exploit this, an attacker must use other techniques:
+
+- **Time Delays:** Using commands like `sleep` or `ping` to make the server hang for a specific time, confirming the vulnerability based on the conditional response time.
+- **Output Redirection:** Redirecting the command's output to a file in a writable, web-accessible directory (e.g., `/var/www/images/`) and then browsing to that file.
+- **Out-of-Band (OOB):** Using commands like `curl` or `nslookup` to send the command's output to an external server controlled by the attacker.
+
+This document provides a step-by-step walkthrough for solving the OS Command Injection labs from PortSwigger's Web Security Academy.
+
+---
