@@ -72,6 +72,3 @@ Automated scanners: Some SAST/DAST solutions detect risky uses of shell calls.
 
 Runtime monitoring: EDR/host monitoring to detect suspicious process creation or network callbacks.
 
-Ethical note
-
-Use the above knowledge only on systems you own or are explicitly authorized to test. Unauthorized testing is illegal and unethical.
