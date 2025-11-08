@@ -10,7 +10,7 @@ Impact examples: read or modify files, create web-accessible backdoors, run proc
 
 Prevalence: Often introduced by insecure use of system calls (system(), exec(), popen(), backticks, or shell invocations from web code).
 
-How it typically works (high level)
+How it typically works [high level]
 
 Application builds a shell command using user input (e.g., sh script.sh --user $input).
 
