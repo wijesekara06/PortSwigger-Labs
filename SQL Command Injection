@@ -330,4 +330,5 @@ SUBSTRING(password,§1§,1)='§a§'
 5. Brute-force each position and character until password is revealed.  
 6. Log in as administrator.
 
+
 **Vulnerability:** Blind SQL Injection (Conditional Response).
